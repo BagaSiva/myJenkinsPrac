@@ -1,0 +1,228 @@
+
+<!doctype html>
+<html lang="en" ng-app="demo">
+<head>
+    <meta charset="UTF-8">
+    <title>Angular SVG round progressbar demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale = 1.0, maximum-scale=1.0, user-scalable=no" />
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
+    <style>
+        *{
+            box-sizing: border-box;
+        }
+
+        body{
+            font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+
+        .cf:before,
+        .cf:after {
+            content: " ";
+            display: table;
+        }
+
+        .cf:after {
+            clear: both;
+        }
+
+        .progress-wrapper{
+            position: relative;
+            margin:20px auto;
+            font-size: 40px;
+        }
+
+        .progress{
+            position: absolute;
+            color: #bbb;
+            font-weight: 100;
+            line-height: 1;
+        }
+
+        .container{
+            width: 100%;
+            max-width: 960px;
+            margin:50px auto 100px;
+            text-align: center;
+        }
+
+        button{
+            display: inline-block;
+            padding: 10px 20px;
+            background: #45ccce;
+            color:#fff;
+            font-size: 16px;
+            border:none;
+            cursor: pointer;
+            border-radius: 4px;
+            text-align: center;
+            margin: 0 5px 5px 0;
+        }
+
+        form{
+            text-align: left;
+            max-width: 350px;
+            margin: 30px auto;
+        }
+
+        form > div{
+            margin-bottom: 15px;
+        }
+
+        input, select{
+            float:right;
+            padding: 5px;
+            width: 150px;
+        }
+
+        input[type="checkbox"]{
+            width: auto;
+        }
+
+        input[type="color"]{
+            height: 30px;
+        }
+
+        .back{
+            position: fixed;
+            top:5px;
+            right:5px;
+        }
+
+        @media(max-width: 480px){
+            .back{
+                position: static;
+                display: block;
+                text-align: center;
+            }
+
+            input, select{
+                width: 100%;
+                margin-top: 5px;
+                float:none;
+            }
+
+            .container{
+                margin-top: 25px;
+            }
+        }
+    </style>
+</head>
+<body ng-controller="demoCtrl">
+    <div class="container">
+        <a class="back" href="https://github.com/crisbeto/angular-svg-round-progressbar">Back to project repo</a>
+
+        <h2>Sample progressbar</h2>
+        <div class="progress-wrapper">
+            <div
+                round-progress
+                max="max"
+                current="current"
+                color="{{ getColor() }}"
+                bgcolor="{{ bgColor }}"
+                remaining-color="{{ remainingColor }}"
+                radius="{{ radius }}"
+                semi="isSemi"
+                rounded="rounded"
+                stroke="{{ stroke }}"
+                clockwise="clockwise"
+                responsive="responsive"
+                duration="{{ duration }}"
+                animation="{{ currentAnimation }}"
+                offset="{{ offset }}"
+                animation-delay="{{ animationDelay }}"
+                on-render="showPreciseCurrent">
+
+                <svg>
+                    <linearGradient id="gradient" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="5%"  stop-color="green"/>
+                        <stop offset="95%" stop-color="gold"/>
+                    </linearGradient>
+                </svg>
+            </div>
+            
+			<div class="progress ng-cloak" ng-style="getStyle()">{{ preciseCurrent || current }}%</div>
+        </div>
+
+
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.js"></script>
+    <script src="roundProgress.js"></script>
+    <script>
+        'use strict';
+
+        angular.module('demo', ['angular-svg-round-progress']).controller('demoCtrl', ['$scope', '$interval', '$timeout', '$window', 'roundProgressService', function($scope, $interval, $timeout, $window, roundProgressService){
+
+            $scope.current =        27;
+            $scope.max =            50;
+            $scope.offset =         0;
+            $scope.timerCurrent =   0;
+            $scope.uploadCurrent =  0;
+            $scope.stroke =         15;
+            $scope.radius =         125;
+            $scope.isSemi =         false;
+            $scope.rounded =        false;
+            $scope.responsive =     false;
+            $scope.clockwise =      true;
+            $scope.currentColor =   '#45ccce';
+            $scope.bgColor =        '#ff0f0f';
+            $scope.remainingColor = '#0000ff';
+            $scope.duration =       800;
+            $scope.currentAnimation = 'easeOutCubic';
+            $scope.animationDelay = 0;
+
+
+            $scope.animations = [];
+
+            angular.forEach(roundProgressService.animations, function(value, key){
+                $scope.animations.push(key);
+            });
+
+            $scope.getStyle = function(){
+                var transform = ($scope.isSemi ? '' : 'translateY(-50%) ') + 'translateX(-50%)';
+
+                return {
+                    'top': $scope.isSemi ? 'auto' : '50%',
+                    'bottom': $scope.isSemi ? '5%' : 'auto',
+                    'left': '50%',
+                    'transform': transform,
+                    '-moz-transform': transform,
+                    '-webkit-transform': transform,
+                    'font-size': $scope.radius/3.5 + 'px'
+                };
+            };
+
+            $scope.getColor = function(){
+                return $scope.gradient ? 'url(#gradient)' : $scope.currentColor;
+            };
+
+            $scope.showPreciseCurrent = function(amount){
+                $timeout(function(){
+                    if(amount <= 0){
+                        $scope.preciseCurrent = $scope.current;
+                    }else{
+                        var math = $window.Math;
+                        $scope.preciseCurrent = math.min(math.round(amount), $scope.max);
+                    }
+                });
+            };
+
+            var getPadded = function(val){
+                return val < 10 ? ('0' + val) : val;
+            };
+
+//             $interval(function(){
+//                 var date = new Date();
+//                 var hours = date.getHours();
+//                 var minutes = date.getMinutes();
+//                 var seconds = date.getSeconds();
+// 
+//                 $scope.hours = hours;
+//                 $scope.minutes = minutes;
+//                 $scope.seconds = seconds;
+//                 $scope.time = getPadded(hours) + ':' + getPadded(minutes) + ':' + getPadded(seconds);
+//             }, 1000);
+        }]);
+    </script>
+</body>
+</html>
